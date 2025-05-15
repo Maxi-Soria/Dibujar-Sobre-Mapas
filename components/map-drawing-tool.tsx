@@ -2,17 +2,16 @@
 
 import type React from "react"
 
-import { useRef, useState, useEffect } from "react"
+import { useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Trash2, Undo, Edit2, Check, X, ZoomIn, ZoomOut, RotateCw, Upload } from "lucide-react"
+import { Trash2, Undo, Edit2, Check, X, ZoomIn, ZoomOut, RotateCw } from "lucide-react"
 import { DrawingCanvas } from "./drawing-canvas"
 import { ColorPicker } from "./color-picker"
 import { Separator } from "@/components/ui/separator"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { DEFAULT_MAP_IMAGE } from "@/lib/constants"
 
 type LineThickness = 1 | 3 | 5
 
@@ -41,25 +40,8 @@ export function MapDrawingTool() {
   const [zoomLevel, setZoomLevel] = useState(1)
   const [isRotatingLabel, setIsRotatingLabel] = useState(false)
   const [thickness, setThickness] = useState<LineThickness>(3)
-  const [isLoading, setIsLoading] = useState(true)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  // Load default image on component mount
-  useEffect(() => {
-    const loadDefaultImage = async () => {
-      setIsLoading(true)
-      try {
-        setBackgroundImage(DEFAULT_MAP_IMAGE)
-      } catch (error) {
-        console.error("Error loading default image:", error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    loadDefaultImage()
-  }, [])
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -70,14 +52,6 @@ export function MapDrawingTool() {
       }
       reader.readAsDataURL(file)
     }
-  }
-
-  const handleResetToDefaultImage = () => {
-    setBackgroundImage(DEFAULT_MAP_IMAGE)
-    setLines([])
-    setSelectedLine(null)
-    setZoomLevel(1)
-    setPanOffset({ x: 0, y: 0 })
   }
 
   const handleStartDrawing = (x: number, y: number) => {
@@ -209,74 +183,56 @@ export function MapDrawingTool() {
     setThickness(value)
   }
 
-  // For panning functionality
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
-
-  const resetPanOffset = () => {
-    setPanOffset({ x: 0, y: 0 })
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-[calc(100vh-120px)]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando mapa...</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="flex h-[calc(100vh-120px)]">
       {/* Main drawing area */}
       <div className="flex-1 relative overflow-hidden">
-        <div className="relative h-full">
-          <DrawingCanvas
-            backgroundImage={backgroundImage || DEFAULT_MAP_IMAGE}
-            lines={lines}
-            currentLine={currentLine}
-            selectedLine={selectedLine}
-            onStartDrawing={handleStartDrawing}
-            onDrawing={handleDrawing}
-            onEndDrawing={handleEndDrawing}
-            onSelectLine={handleSelectLine}
-            zoomLevel={zoomLevel}
-            isRotatingLabel={isRotatingLabel}
-            onStartRotatingLabel={handleStartRotatingLabel}
-            onRotateLabel={handleRotateLabel}
-            onEndRotatingLabel={handleEndRotatingLabel}
-            onUpdateLabelPosition={handleUpdateLabelPosition}
-            panOffset={panOffset}
-            setPanOffset={setPanOffset}
-          />
-
-          {/* Floating zoom controls */}
-          <div className="absolute top-4 left-4 flex flex-col gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-lg shadow-md">
-            <Button size="icon" variant="outline" onClick={handleZoomIn} title="Acercar">
-              <ZoomIn className="h-4 w-4" />
-            </Button>
-            <Button size="icon" variant="outline" onClick={handleZoomOut} title="Alejar">
-              <ZoomOut className="h-4 w-4" />
-            </Button>
-            <Button size="icon" variant="outline" onClick={handleResetZoom} title="Restablecer zoom">
-              <div className="text-xs font-bold">1:1</div>
-            </Button>
-            <Button size="icon" variant="outline" onClick={resetPanOffset} title="Centrar mapa">
-              <div className="text-xs font-bold">↔</div>
-            </Button>
+        {!backgroundImage ? (
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center h-full flex flex-col items-center justify-center">
+            <p className="text-gray-500 mb-4">Sube una imagen de fondo para comenzar a dibujar</p>
+            <Button onClick={() => fileInputRef.current?.click()}>Subir Imagen</Button>
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
           </div>
-        </div>
+        ) : (
+          <div className="relative h-full">
+            <DrawingCanvas
+              backgroundImage={backgroundImage}
+              lines={lines}
+              currentLine={currentLine}
+              selectedLine={selectedLine}
+              onStartDrawing={handleStartDrawing}
+              onDrawing={handleDrawing}
+              onEndDrawing={handleEndDrawing}
+              onSelectLine={handleSelectLine}
+              zoomLevel={zoomLevel}
+              isRotatingLabel={isRotatingLabel}
+              onStartRotatingLabel={handleStartRotatingLabel}
+              onRotateLabel={handleRotateLabel}
+              onEndRotatingLabel={handleEndRotatingLabel}
+              onUpdateLabelPosition={handleUpdateLabelPosition}
+            />
+
+            {/* Floating zoom controls */}
+            <div className="absolute top-4 left-4 flex flex-col gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-lg shadow-md">
+              <Button size="icon" variant="outline" onClick={handleZoomIn} title="Acercar">
+                <ZoomIn className="h-4 w-4" />
+              </Button>
+              <Button size="icon" variant="outline" onClick={handleZoomOut} title="Alejar">
+                <ZoomOut className="h-4 w-4" />
+              </Button>
+              <Button size="icon" variant="outline" onClick={handleResetZoom} title="Restablecer zoom">
+                <div className="text-xs font-bold">1:1</div>
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Bottom toolbar */}
         <div className="absolute bottom-0 left-0 right-0 flex gap-2 p-4 bg-white/80 backdrop-blur-sm border-t">
           <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="flex-1">
-            <Upload className="mr-2 h-4 w-4" /> Subir Imagen
+            Cambiar Imagen
           </Button>
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-          <Button variant="outline" onClick={handleResetToDefaultImage} className="flex-1">
-            Imagen Predeterminada
-          </Button>
           <Button variant="outline" onClick={handleUndo} disabled={lines.length === 0} className="flex-1">
             <Undo className="mr-2 h-4 w-4" /> Deshacer
           </Button>
@@ -294,7 +250,7 @@ export function MapDrawingTool() {
           <div className="space-y-6">
             <div>
               <Label htmlFor="color-picker">Color de Línea</Label>
-              <ColorPicker color={color} onChange={setColor} />
+              <ColorPicker color={color} onChange={setColor} disabled={!backgroundImage} />
             </div>
 
             <div>
@@ -306,6 +262,7 @@ export function MapDrawingTool() {
                 value={thickness.toString()}
                 onValueChange={(value) => handleThicknessChange(Number.parseInt(value) as LineThickness)}
                 className="flex gap-4"
+                disabled={!backgroundImage}
               >
                 <div className="flex flex-col items-center gap-1">
                   <div className="flex items-center space-x-2">
@@ -340,6 +297,7 @@ export function MapDrawingTool() {
                 step={1}
                 value={[opacity]}
                 onValueChange={(value) => setOpacity(value[0])}
+                disabled={!backgroundImage}
                 className="mt-2"
               />
             </div>
@@ -406,7 +364,11 @@ export function MapDrawingTool() {
                 </div>
               </div>
             ) : (
-              <div className="text-gray-500 italic">Dibuja una línea o selecciona una existente para editar</div>
+              <div className="text-gray-500 italic">
+                {backgroundImage
+                  ? "Dibuja una línea o selecciona una existente para editar"
+                  : "Sube una imagen para comenzar a dibujar"}
+              </div>
             )}
           </div>
         </div>

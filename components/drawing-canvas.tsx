@@ -35,8 +35,6 @@ interface DrawingCanvasProps {
   onRotateLabel: (angle: number) => void
   onEndRotatingLabel: () => void
   onUpdateLabelPosition: (lineId: string, position: Point) => void
-  panOffset: { x: number; y: number }
-  setPanOffset: React.Dispatch<React.SetStateAction<{ x: number; y: number }>>
 }
 
 export function DrawingCanvas({
@@ -54,14 +52,13 @@ export function DrawingCanvas({
   onRotateLabel,
   onEndRotatingLabel,
   onUpdateLabelPosition,
-  panOffset,
-  setPanOffset,
 }: DrawingCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 })
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 })
   const [scale, setScale] = useState(1)
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
   const [isPanning, setIsPanning] = useState(false)
   const [lastPanPoint, setLastPanPoint] = useState({ x: 0, y: 0 })
   const [hoveredLabel, setHoveredLabel] = useState<string | null>(null)
@@ -70,7 +67,6 @@ export function DrawingCanvas({
   const [rotationCenter, setRotationCenter] = useState<Point | null>(null)
   const [interactionMode, setInteractionMode] = useState<"draw" | "pan" | "rotate" | "drag">("draw")
   const [cursorPosition, setCursorPosition] = useState<Point | null>(null)
-  const [imageLoaded, setImageLoaded] = useState(false)
 
   // Load and draw the background image
   useEffect(() => {
@@ -81,15 +77,11 @@ export function DrawingCanvas({
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    setImageLoaded(false)
-
     const img = new Image()
     img.crossOrigin = "anonymous"
     img.src = backgroundImage
 
     img.onload = () => {
-      setImageLoaded(true)
-
       // Set canvas size to match container
       const containerWidth = container.clientWidth
       const containerHeight = container.clientHeight
@@ -108,39 +100,22 @@ export function DrawingCanvas({
       setCanvasSize({ width: containerWidth, height: containerHeight })
       setImageSize({ width: scaledWidth, height: scaledHeight })
       setScale(baseScale)
+      setPanOffset({ x: 0, y: 0 })
 
       // Draw everything
       drawCanvas()
-    }
-
-    img.onerror = () => {
-      console.error("Error loading image")
-      setImageLoaded(true) // Still set to true to remove loading state
     }
   }, [backgroundImage])
 
   // Redraw canvas when lines, zoom, or pan changes
   useEffect(() => {
-    if (imageLoaded) {
-      drawCanvas()
-    }
-  }, [
-    lines,
-    currentLine,
-    selectedLine,
-    canvasSize,
-    imageSize,
-    zoomLevel,
-    panOffset,
-    hoveredLabel,
-    cursorPosition,
-    imageLoaded,
-  ])
+    drawCanvas()
+  }, [lines, currentLine, selectedLine, canvasSize, imageSize, zoomLevel, panOffset, hoveredLabel, cursorPosition])
 
   // Handle window resize
   useEffect(() => {
     const handleResize = () => {
-      if (!containerRef.current || !canvasRef.current || !imageLoaded) return
+      if (!containerRef.current || !canvasRef.current) return
 
       const containerWidth = containerRef.current.clientWidth
       const containerHeight = containerRef.current.clientHeight
@@ -172,7 +147,7 @@ export function DrawingCanvas({
 
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
-  }, [backgroundImage, lines, currentLine, selectedLine, zoomLevel, panOffset, imageLoaded])
+  }, [backgroundImage, lines, currentLine, selectedLine, zoomLevel, panOffset])
 
   const drawCanvas = () => {
     const canvas = canvasRef.current
@@ -915,14 +890,6 @@ export function DrawingCanvas({
     const dy = point.y - yy
 
     return Math.sqrt(dx * dx + dy * dy)
-  }
-
-  if (!imageLoaded) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
-      </div>
-    )
   }
 
   return (
